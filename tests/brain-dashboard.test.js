@@ -18,17 +18,19 @@ test('publishes matching Roland Power Health Max Food Company website artifacts'
   assert.doesNotMatch(html, /FitLife Brands/i);
 });
 
-test('website includes the requested customer-facing sections and current social links', () => {
+test('website uses polished customer-facing copy and current social links', () => {
   const html = fs.readFileSync(outputPath, 'utf8');
-  for (const label of ['Home', 'Our Brands', 'Learn &amp; Explore', 'Documents', 'Social Discovery', 'Contact']) {
+  for (const label of ['Home', 'Our Brands', 'Learn &amp; Explore', 'Resources', 'Community', 'Contact']) {
     assert.match(html, new RegExp(label));
   }
   for (const url of ['https://facebook.com/fitlifebrands', 'https://instagram.com/fitlife_brands', 'https://pinterest.com/fitlife_brands', 'https://x.com/fitlifebrands', 'https://youtube.com/channel/UC8hqSCOoNYKxeRv7Vlx43Hg']) {
     assert.match(html, new RegExp(url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
   assert.doesNotMatch(html, /Tool collectors|Provenance/);
-  assert.match(html, /id="document-library"/);
-  assert.match(html, /sanitizeBranding/);
+  assert.doesNotMatch(html, /mock-up|fake|demo|prototype|placeholder|supplied website data|Social discovery|Document library/i);
+  assert.doesNotMatch(html, /"source"|"evidence"|"ingestion_enabled"/);
+  assert.match(html, /id="resource-library"/);
+  assert.match(html, /Our Quality Promise/);
 });
 
 test('dependency manifest names only the runtime source file', () => {

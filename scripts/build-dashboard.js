@@ -8,25 +8,25 @@ fs.mkdirSync(outputDir, { recursive: true });
 
 const file = name => source.files.find(item => item.path === name)?.content || {};
 const context = file('web_crawl/website_context.json');
-const profiles = file('social_discovery/social_profiles.json').profiles || [];
+const profiles = (file('social_discovery/social_profiles.json').profiles || []).map(({ platform, url }) => ({ platform, url }));
 const originalName = /fitlife brands,?\s*(inc\.)?/gi;
 const brand = "Roland's Power Health Max Food Company";
 const sanitizeBranding = value => String(value ?? '')
   .replace(originalName, brand)
-  .replace(/fitlifebrands\.com/gi, 'rolandspowerhealthmaxfood.com');
+  .replace(/fitlifebrands\.com/gi, 'rolandspowerhealthmaxfood.com')
+  .replace(/Companyprovides/g, 'Company provides');
 const safe = value => JSON.stringify(value).replace(/</g, '\\u003c');
 const brandPages = (context.page_documents || [])
   .filter(page => /nutrition|laboratories|siren/i.test(page.title || ''))
   .map(page => ({ title: sanitizeBranding(page.title), description: sanitizeBranding(page.meta_description || page.text_excerpt || '') }));
-const documents = source.files.filter(item => item.path.startsWith('generated_documents/')).map(item => ({
-  name: item.path.split('/').pop(),
-  type: item.content_type,
-  content: sanitizeBranding(typeof item.content === 'string' ? item.content : JSON.stringify(item.content, null, 2)),
-}));
-const data = { brand, brandPages, documents, profiles, articles: [
+const data = { brand, brandPages, profiles, articles: [
   { title: 'Macronutrients 101', text: 'Build a confident routine by understanding the role of protein, carbohydrates, and fats.' },
   { title: '7 Core Principles for Weight Management', text: 'Simple, sustainable habits for an energized approach to your goals.' },
   { title: '5 Cardio Exercises for Beginners', text: 'A friendly place to start moving more and feeling stronger.' },
+], resources: [
+  { title: 'Wellness Essentials', type: 'Nutrition guide', content: 'A straightforward introduction to building a balanced daily wellness routine. Explore the role of nutrition, movement, rest, and consistency in supporting your goals.' },
+  { title: 'Our Quality Promise', type: 'Company standard', content: 'Every Roland’s product begins with a clear purpose: help people feel ready for their day. We pursue thoughtful formulations, clear information, and products made for real routines.' },
+  { title: 'Shipping & Returns', type: 'Customer care', content: 'Orders are typically processed within two business days. Standard delivery times vary by location. If you need help with an order, our customer care team is ready to assist.' },
 ] };
 
 const html = String.raw`<!doctype html>
@@ -42,13 +42,13 @@ const html = String.raw`<!doctype html>
 </head>
 <body>
   <div class="announcement">Free continental U.S. shipping on orders over $49.99</div>
-  <header class="header"><a class="logo" href="#home"><b>ROLAND'S</b>Power Health Max Food Company</a><nav class="nav" aria-label="Primary navigation"><a href="#home">Home</a><a href="#brands">Our Brands</a><a href="#learn">Learn &amp; Explore</a><a href="#documents">Documents</a><a href="#social">Social Discovery</a><a href="#contact">Contact</a></nav></header>
+  <header class="header"><a class="logo" href="#home"><b>ROLAND'S</b>Power Health Max Food Company</a><nav class="nav" aria-label="Primary navigation"><a href="#home">Home</a><a href="#brands">Our Brands</a><a href="#learn">Learn &amp; Explore</a><a href="#documents">Resources</a><a href="#social">Community</a><a href="#contact">Contact</a></nav></header>
   <main>
     <section id="home" class="hero"><div class="hero-inner"><div><div class="kicker">Premium wellness, made practical</div><h1>Power your best everyday.</h1><p>Roland's Power Health Max Food Company creates thoughtfully formulated nutrition products for energy, strength, performance, and balanced daily wellness.</p><a class="cta" href="#brands">Explore our brands</a></div><div class="hero-orb" aria-hidden="true"></div></div></section>
     <section id="brands" class="section brands"><div class="section-heading"><div class="kicker">Our brands</div><h2>Support that meets you where you are.</h2><p>Explore the wellness and sports-nutrition lines that shape our product family.</p></div><div id="brand-cards" class="cards"></div></section>
     <section id="learn" class="section learn"><div class="section-heading"><div class="kicker">Learn &amp; explore</div><h2>Small insights. Stronger habits.</h2><p>Practical nutrition and movement resources for the road ahead.</p></div><div id="article-cards" class="article-grid"></div></section>
-    <section id="documents" class="section documents"><div class="section-heading"><div class="kicker">Document library</div><h2>Product and company resources.</h2><p>Browse the available reference documents for this Roland's mock-up.</p></div><div id="document-library"><div class="doc-toolbar"><input id="doc-search" type="search" placeholder="Search documents" aria-label="Search documents"></div><div id="document-list" class="document-list"></div><div id="document-preview" class="preview" hidden></div></div></section>
-    <section id="social" class="section social"><div class="section-heading"><div class="kicker">Social discovery</div><h2>Find us where you already scroll.</h2><p>Connect through the social profiles discovered in the supplied website data.</p></div><div id="social-links" class="social-links"></div></section>
+    <section id="documents" class="section documents"><div class="section-heading"><div class="kicker">Resources</div><h2>Guidance for your everyday routine.</h2><p>Helpful product, wellness, and customer-care information—all in one place.</p></div><div id="resource-library"><div class="document-list" id="document-list"></div><div id="document-preview" class="preview" hidden></div></div></section>
+    <section id="social" class="section social"><div class="section-heading"><div class="kicker">Community</div><h2>Keep up with Roland’s.</h2><p>Follow along for product news, practical tips, and everyday motivation.</p></div><div id="social-links" class="social-links"></div></section>
     <section id="contact" class="section contact"><div class="section-heading"><div class="kicker">Contact</div><h2>Let's start a healthy conversation.</h2><p>Have a product question or general inquiry? We would love to hear from you.</p></div><div class="contact-box"><div><strong>Roland's Power Health Max Food Company</strong><p>Questions, feedback, and partnership inquiries are welcome.</p></div><a class="cta" href="mailto:hello@rolandspowerhealthmaxfood.com">Get in touch</a></div></section>
   </main><footer class="footer">© 2026 Roland's Power Health Max Food Company · Better nutrition, every day.</footer>
   <script id="site-data" type="application/json">__SITE_DATA__</script>
@@ -59,8 +59,8 @@ const html = String.raw`<!doctype html>
     document.getElementById('brand-cards').innerHTML = site.brandPages.map(item => '<article class="card"><h3>'+escapeHtml(item.title)+'</h3><p>'+escapeHtml(item.description)+'</p></article>').join('');
     document.getElementById('article-cards').innerHTML = site.articles.map(item => '<article class="article"><h3>'+escapeHtml(item.title)+'</h3><p>'+escapeHtml(item.text)+'</p><a href="#documents">Read more →</a></article>').join('');
     const list = document.getElementById('document-list'), preview = document.getElementById('document-preview');
-    function renderDocuments(query=''){const found=site.documents.filter(item => (item.name+' '+item.content).toLowerCase().includes(query.toLowerCase()));list.innerHTML=found.length?found.map((item,index)=>'<article class="document"><div><strong>'+escapeHtml(item.name)+'</strong><small>'+escapeHtml(item.type)+'</small></div><button data-document="'+index+'">View document</button></article>').join(''):'<p>No documents match your search.</p>';list.querySelectorAll('[data-document]').forEach(button=>button.addEventListener('click',()=>{const item=found[Number(button.dataset.document)];preview.hidden=false;preview.textContent=sanitizeBranding(item.content)}));}
-    document.getElementById('doc-search').addEventListener('input', event => renderDocuments(event.target.value));renderDocuments();
+    function renderResources(){list.innerHTML=site.resources.map((item,index)=>'<article class="document"><div><strong>'+escapeHtml(item.title)+'</strong><small>'+escapeHtml(item.type)+'</small></div><button data-resource="'+index+'">Read more</button></article>').join('');list.querySelectorAll('[data-resource]').forEach(button=>button.addEventListener('click',()=>{const item=site.resources[Number(button.dataset.resource)];preview.hidden=false;preview.textContent=item.content}));}
+    renderResources();
     document.getElementById('social-links').innerHTML = site.profiles.map(profile => '<a href="'+escapeHtml(profile.url)+'" target="_blank" rel="noreferrer">'+escapeHtml(profile.platform)+' <span>↗</span></a>').join('');
   </script>
 </body></html>`;
